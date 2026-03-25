@@ -64,7 +64,13 @@ if sayfa == "Ana Sayfa (Tahmin)":
 # --- 2. MODEL ANALİZİ SAYFASI (Kriter 14, 15, 16) ---
 elif sayfa == "Model Analizi ve Grafikler":
     st.title("📊 Model Performansı ve Kritik Değerlendirme")
+    st.subheader("Eğitim Süreci (Accuracy & Loss)")
+    try:
+        st.image('accuracy_loss.png', use_container_width=True)
+    except:
+        st.warning("Eğitim grafiği bulunamadı.")
     
+    st.write("---") # Araya ince bir çizgi çeker
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Karmaşıklık Matrisi (Confusion Matrix)")
@@ -80,19 +86,29 @@ elif sayfa == "Model Analizi ve Grafikler":
         except:
             st.warning("Lütfen Evaluate.py dosyasını çalıştırarak roc_curve.png dosyasını oluşturduğunuzdan emin olun.")
 
-# --- 3. PROJE HAKKINDA SAYFASI (Kriter 1, 2, 3, 4, 5, 20) ---
+# --- 3. PROJE HAKKINDA SAYFASI (Kriter 1, 2, 3, 4, 5, 8, 9, 10, 11, 20) ---
 elif sayfa == "Proje Hakkında ve Sonuç":
-    st.title("Proje Detayları ve Sonuç")
+    st.title("ℹ️ Proje Detayları ve Sonuç")
     
     st.markdown("### Problem Tanımı ve Önemi")
     st.write("Beyin tümörlerinin manuel olarak MR görüntülerinden tespit edilmesi uzman radyologlar için zaman alıcı bir süreçtir. Erken ve doğru teşhis, hayatta kalma oranını doğrudan etkiler. Bu proje, beyin MR görüntüleri üzerinden tümör tespiti ve sınıflandırmasını otonom hale getirerek hekimlere karar destek sistemi (ikinci bir görüş) sunmayı amaçlamaktadır.")
     
     st.markdown("### Veri Seti (Brain Tumor MRI Dataset)")
-    st.write("Bu çalışmada Kaggle'dan Masoud Nickparvar tarafından derlenen veri seti kullanılmıştır. Veri seti 4 sınıftan oluşmaktadır: Glioma, Meningioma, No Tumor ve Pituitary. Eğitim aşamasında toplam 4480, test aşamasında 1600 görsel kullanılmış; veriler 224x224 boyutunda normalize edilerek eğitilmiştir.")
+    st.write("Bu çalışmada Kaggle'dan Masoud Nickparvar tarafından derlenen veri seti kullanılmıştır. Veri seti 4 sınıftan oluşmaktadır: Glioma, Meningioma, No Tumor ve Pituitary. Eğitim aşamasında toplam 4480, test aşamasında 1600 görsel kullanılmış; veriler 224x224 boyutunda normalize edilerek ve Data Augmentation (veri çoğaltma) teknikleri uygulanarak eğitime hazırlanmıştır.")
     
-    st.markdown("### Sonuç (Kriter 20)")
+    st.markdown("### Model Mimarisi ve Eğitim Hiperparametreleri")
+    st.write("""
+    Projede, web tabanlı teşhis sistemlerinde hızlı ve isabetli sonuç vermesi amacıyla Transfer Learning yöntemiyle **MobileNetV2** mimarisi kullanılmıştır. Modelin eğitim parametreleri (hiperparametreler) şu şekilde ayarlanmıştır:
+    * **Optimizasyon (Optimizer):** Adam
+    * **Öğrenme Oranı (Learning Rate):** 0.0001 (Medikal verilerin hassasiyeti gözetilerek düşük tutulmuştur)
+    * **Kayıp Fonksiyonu (Loss Function):** Categorical Crossentropy
+    * **Batch Size:** 32
+    * **Epoch:** 20 (Aşırı öğrenmeyi önlemek için EarlyStopping kullanılmış ve 19. Epoch'ta en iyi ağırlıklar kaydedilmiştir.)
+    """)
+
+    st.markdown("### Sonuç ve Değerlendirme")
     st.info("""
-    Geliştirilen MobileNetV2 tabanlı Transfer Learning modeli, tıbbi görüntü sınıflandırma görevinde genel bir başarı elde etmiş olsa da, %100 otonom bir teşhis aracı olarak kullanılamaz. Sağlık bilişimi etiği gereği, modelin özellikle azınlık sınıflardaki (Glioma) kaçırma oranı dikkate alınmalıdır. Bu uygulama, doktorların yerini almak için değil, triyaj süreçlerini hızlandırmak ve teşhis sürecinde doktora referans olmak üzere tasarlanmıştır. Gelecek çalışmalarda veri setindeki sınıf dağılımları klinik gerçekliğe daha uygun hale getirilmeli ve Siyam ağları gibi daha kompleks özellik çıkarım yöntemleri denenmelidir.
+    Geliştirilen model genel başarı (Accuracy) olarak %82 seviyesine ulaşsa da, %100 otonom bir teşhis aracı olarak kullanılamaz. Sağlık bilişimi etiği gereği, modelin özellikle sınırları belirsiz olan Glioma tümörlerini kaçırma (False Negative) riski dikkate alınmalıdır. Bu uygulama, doktorların yerini almak için değil, triyaj süreçlerini hızlandırmak üzere tasarlanmıştır.
     """)
     
     st.markdown("### Kaynakça")
