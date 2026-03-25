@@ -65,15 +65,6 @@ if sayfa == "Ana Sayfa (Tahmin)":
 elif sayfa == "Model Analizi ve Grafikler":
     st.title("📊 Model Performansı ve Kritik Değerlendirme")
     
-    st.markdown("""
-    ### Şüpheci Analiz: %82 Genel Doğruluk Bize Neyi Saklıyor?
-    Tıbbi teşhis modellerinde "Accuracy" (Genel Doğruluk) metrik olarak tek başına değerlendirildiğinde büyük yanılgılara yol açabilir. Sınıflandırma raporu ve matrisler detaylıca incelendiğinde modelin bazı mantık boşlukları ve klinik riskler taşıdığı tespit edilmiştir:
-    
-    1. **Kritik Risk (Glioma - False Negative):** Model, Glioma tümörlerini yakalamada zorlanmaktadır (Recall: 0.68). Gerçekte hasta olan vakaların bir kısmı sistem tarafından kaçırılabilmektedir. Sağlık bilişiminde yanlış negatifler en tehlikeli senaryodur.
-    2. **Aşırı Hassasiyet (Pituitary - False Positive):** Model, Pituitary vakalarının tamamını (%100) yakalamış olsa da, emin olamadığı diğer tümör tiplerini de "garanti olsun" mantığıyla Pituitary olarak etiketleme eğilimindedir (Precision: 0.75).
-    3. **Sağlıklı Ayrımı:** Model, sağlıklı beyin (No Tumor) görüntülerini yüksek bir doğrulukla (%97) diğerlerinden ayırt edebilmektedir.
-    """)
-    
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Karmaşıklık Matrisi (Confusion Matrix)")
