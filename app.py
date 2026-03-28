@@ -17,7 +17,12 @@ class_names = ['Glioma', 'Meningioma', 'No Tumor', 'Pituitary']
 
 # --- YAN MENÜ (KULLANILABİLİRLİK VE GEZİNME - Kriter 18) ---
 st.sidebar.title("Menü")
-sayfa = st.sidebar.radio("Gezinme", ["Ana Sayfa (Tahmin)", "Model Analizi ve Grafikler", "Proje Hakkında ve Sonuç"])
+sayfa = st.sidebar.radio("Gezinme", [
+    "Ana Sayfa (Tahmin)", 
+    "Model Analizi ve Grafikler", 
+    "Proje Kodları ve Açıklamaları", 
+    "Proje Hakkında ve Sonuç"
+])
 
 # --- 1. ANA SAYFA: TAHMİN ARAYÜZÜ (Kriter 19 ve OOD Güvenlik Filtresi) ---
 if sayfa == "Ana Sayfa (Tahmin)":
@@ -53,7 +58,7 @@ if sayfa == "Ana Sayfa (Tahmin)":
                 
                 # Eğer resim renkliyse VEYA çok aydınlık/beyaz arka planlıysa doğrudan reddet!
                 if is_colored or is_too_bright:
-                    st.error("⚠️ **Sistem Uyarısı:** Yüklediğiniz görsel yapısal veya renk olarak bir Beyin MR görüntüsüne benzemiyor. Renkli bir fotoğraf veya beyaz arka planlı bir çizim tespit edildi. Lütfen geçerli bir siyah-beyaz MR yükleyin.")
+                    st.error("⚠️ **Sistem Uyarısı:** Yüklediğiniz görsel yapısal veya renk olarak bir Beyin MR görüntüsüne benzemiyor.Lütfen geçerli bir beyin görüntüsü girin.")
                 else:
                     # Görüntü MR testini geçti, Ön İşleme (Kriter 6)
                     img = image.resize((224, 224))
@@ -149,6 +154,127 @@ elif sayfa == "Model Analizi ve Grafikler":
             st.image('roc_curve.png', use_container_width=True)
         except:
             st.warning("ROC Eğrisi bulunamadı.")
+# --- YENİ EKLENEN SAYFA: PROJE KODLARI VE AÇIKLAMALARI ---
+elif sayfa == "Proje Kodları ve Açıklamaları":
+    st.title("💻 Proje Kodları ve Mimari Açıklamalar")
+    st.write("Bu bölümde, projenin hem arka planında çalışan eğitim algoritması (Data.py) hem de canlı sistemi ayakta tutan web arayüzü (app.py) kodları şüpheci bir mühendislik yaklaşımıyla açıklanmıştır.")
+
+    # --- 1. DATA.PY KISMI ---
+    st.markdown("## 1. Model Eğitimi ve Veri Ön İşleme (`Data.py`)")
+    st.info("Bu kod blokları, modelin arka planda nasıl eğitildiğini gösterir. Sistemin orijinal eğitim scriptidir.")
+    st.markdown("""
+    * **Veri Sızıntısı (Data Leakage) Önlemi:** Test setinde karıştırma (`shuffle=False`) kapatılarak metriklerin şeffaf hesaplanması sağlanmıştır.
+    * **Kontrollü Eğitim:** Sistemin kendi haline bırakılıp ezber (overfitting) yapmasını engellemek için `EarlyStopping` kullanılmış, Transfer Learning ile MobileNetV2 mimarisi entegre edilmiştir.
+    """)
+    st.code('''
+import os
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Dropout
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+
+base_dir = r'C:\\Users\\Oğuzhan YİĞİT\\Dropbox\\PC\\Downloads\\archive'
+train_dir = os.path.join(base_dir, 'Training')
+test_dir = os.path.join(base_dir, 'Testing')
+
+train_datagen = ImageDataGenerator(
+    rescale=1./255,           
+    rotation_range=15,        
+    width_shift_range=0.1,    
+    height_shift_range=0.1,   
+    zoom_range=0.1,           
+    horizontal_flip=True,     
+    validation_split=0.2
+)
+
+test_datagen = ImageDataGenerator(rescale=1./255)
+
+train_generator = train_datagen.flow_from_directory(
+    train_dir, target_size=(224, 224), batch_size=32, class_mode='categorical', subset='training'
+)
+
+validation_generator = train_datagen.flow_from_directory(
+    train_dir, target_size=(224, 224), batch_size=32, class_mode='categorical', subset='validation'
+)
+
+test_generator = test_datagen.flow_from_directory(
+    test_dir, target_size=(224, 224), batch_size=32, class_mode='categorical', shuffle=False
+)
+
+base_model = MobileNetV2(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
+base_model.trainable = False
+
+x = base_model.output
+x = GlobalAveragePooling2D()(x)
+x = Dense(128, activation='relu')(x)
+x = Dropout(0.5)(x) 
+predictions = Dense(4, activation='softmax')(x)
+
+model = Model(inputs=base_model.input, outputs=predictions)
+
+model.compile(optimizer=Adam(learning_rate=0.0001), 
+              loss='categorical_crossentropy', 
+              metrics=['accuracy'])
+
+early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+checkpoint = ModelCheckpoint('brain_tumor_model.keras', monitor='val_accuracy', save_best_only=True)
+
+history = model.fit(
+    train_generator,
+    validation_data=validation_generator,
+    epochs=20,
+    callbacks=[early_stop, checkpoint]
+)
+    ''', language='python')
+
+    st.markdown("---")
+
+    # --- 2. APP.PY KISMI ---
+    st.markdown("## 2. Web Arayüzü ve Güvenlik Filtreleri (`app.py`)")
+    st.info("Bu kod bloğu, canlı web sitesinin ve 'Dağılım Dışı Veri' (Out-of-Distribution) güvenlik gardiyanlarının nasıl çalıştığını gösterir.")
+    st.markdown("""
+    * **OOD (Out-of-Distribution) Tespiti:** Sisteme MR olmayan, renkli veya beyaz arka planlı alakasız görüntüler yüklendiğinde modelin saçmalamasını önlemek için katı piksel (renk ve parlaklık) filtreleri yazılmıştır.
+    * **Gerçekçi Güven Eşiği:** Modelin emin olamadığı durumlarda (%45 altı güven skoru) yanlış teşhis riskini önlemek için 'Kararsız Teşhis' uyarısı tetiklenir.
+    """)
+    st.code('''
+# --- GÜVENLİK FİLTRESİ (OOD DETECTION) KODLARI ---
+img_array_check = np.array(image)
+
+# Filtre 1: Katı Renk Kontrolü (Maksimum sapma)
+# Resmin tek bir yerinde bile kırmızı/yeşil/mavi belirginse affetme.
+color_max_std = np.max(np.std(img_array_check, axis=2))
+is_colored = color_max_std > 20.0
+
+# Filtre 2: MR Arka Plan (Parlaklık) Kontrolü
+# Beyaz grafikler ve aydınlık resimleri engeller.
+mean_brightness = np.mean(img_array_check)
+is_too_bright = mean_brightness > 160
+
+if is_colored or is_too_bright:
+    st.error("⚠️ Sistem Uyarısı: Renkli veya beyaz arka planlı çizim tespit edildi. Lütfen geçerli bir siyah-beyaz MR yükleyin.")
+else:
+    # Görüntü Ön İşleme
+    img = image.resize((224, 224))
+    img_array = img_to_array(img)
+    img_array = img_array / 255.0  
+    img_array = np.expand_dims(img_array, axis=0)
+    
+    # Model Tahmini
+    predictions = model.predict(img_array)[0]
+    predicted_class_idx = np.argmax(predictions)
+    predicted_class = class_names[predicted_class_idx]
+    confidence = predictions[predicted_class_idx] * 100
+    
+    # Filtre 3: Gerçekçi Güven Eşiği
+    if confidence < 45.0:
+        st.warning("⚠️ Kararsız Teşhis: Model özelliklerden emin olamadı. Lezyon sınırları belirsiz olabilir.")
+    else:
+        # Sonuç Gösterimi
+        st.success(f"Teşhis: {predicted_class} (Güven Skoru: %{confidence:.2f})")
+    ''', language='python')
 # --- 3. PROJE HAKKINDA SAYFASI (Kriter 1, 2, 3, 4, 5, 8, 9, 10, 11, 20) ---
 elif sayfa == "Proje Hakkında ve Sonuç":
     st.title("ℹ️ Proje Detayları ve Sonuç")
