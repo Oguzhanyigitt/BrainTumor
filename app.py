@@ -61,31 +61,74 @@ if sayfa == "Ana Sayfa (Tahmin)":
                 for i, class_name in enumerate(class_names):
                     st.progress(float(predictions[i]), text=f"{class_name}: %{predictions[i]*100:.2f}")
 
-# --- 2. MODEL ANALİZİ SAYFASI (Kriter 14, 15, 16) ---
+# --- 2. MODEL ANALİZİ SAYFASI (Kriter 14, 15, 16 ve Gelişmiş Metrikler) ---
 elif sayfa == "Model Analizi ve Grafikler":
     st.title("📊 Model Performansı ve Kritik Değerlendirme")
-    st.subheader("Eğitim Süreci (Accuracy & Loss)")
+    
+    # ŞIK METRİK KARTLARI (Dashboard)
+    st.markdown("### 🎯 Temel Performans Metrikleri (Test Seti Üzerinde)")
+    st.write("Aşağıdaki metrikler, modelin daha önce hiç görmediği 1600 hastalık test verisi üzerinde hesaplanmıştır. (Not: Canlı tahminlerde etiket bilinmediği için metrikler bilimsel standartlar gereği sabit tutulmuştur.)")
+    
+    # 3 sütunlu 2 satır metrik kartları oluşturuyoruz
+    m1, m2, m3 = st.columns(3)
+    m1.metric(label="Genel Doğruluk (Accuracy)", value="%82.0")
+    m2.metric(label="F1-Score (Makro Ortalama)", value="%82.0")
+    m3.metric(label="Precision (Hassasiyet)", value="%83.0")
+    
+    m4, m5, m6 = st.columns(3)
+    m4.metric(label="Recall (Duyarlılık)", value="%82.0")
+    m5.metric(label="ROC AUC Skoru", value="%96.2", delta="Çok Yüksek", delta_color="normal")
+    m6.metric(label="Cohen's Kappa", value="0.76", delta="Güçlü Uyum", delta_color="normal")
+    
+    st.markdown("---")
+
+    st.markdown("""
+    ### 🧠 Şüpheci Analiz: Sadece Rakamlara Neden Güvenmiyoruz?
+    Tıbbi teşhis modellerinde "Accuracy" (Genel Doğruluk) veya MAE (Ortalama Mutlak Hata - ki sınıflandırma için kullanımı bilimsel olarak yanlıştır) gibi metrikler tek başına değerlendirildiğinde büyük yanılgılara yol açabilir. Cohen's Kappa değerimiz (0.76) başarının tesadüf olmadığını kanıtlasa da, detaylara inildiğinde kritik klinik riskler mevcuttur:
+    
+    1. **Kritik Risk (Glioma - False Negative):** Model, Glioma tümörlerini yakalamada zorlanmaktadır (Recall: 0.68). Gerçekte hasta olan vakaların bir kısmı sistem tarafından kaçırılabilmektedir. Sağlık bilişiminde yanlış negatifler en tehlikeli senaryodur.
+    2. **Aşırı Hassasiyet (Pituitary - False Positive):** Model, Pituitary vakalarının tamamını (%100) yakalamış olsa da, emin olamadığı diğer tümör tiplerini de "garanti olsun" mantığıyla Pituitary olarak etiketleme eğilimindedir (Precision: 0.75).
+    3. **Sağlıklı Ayrımı:** Model, sağlıklı beyin (No Tumor) görüntülerini çok yüksek bir doğrulukla (%97) diğerlerinden ayırt edebilmektedir.
+    """)
+    
+    st.markdown("---")
+    
+    # EĞİTİM HİPERPARAMETRELERİ (Öne Çıkarılmış)
+    st.markdown("### ⚙️ Model Eğitim Hiperparametreleri")
+    h1, h2, h3, h4, h5 = st.columns(5)
+    h1.info("**Model Mimarisi**\n\nMobileNetV2 (CNN)")
+    h2.info("**Optimizer**\n\nAdam")
+    h3.info("**Learning Rate**\n\n0.0001")
+    h4.info("**Batch Size**\n\n32")
+    h5.info("**Epoch**\n\n20 (EarlyStop)")
+    
+    st.write("**Kayıp Fonksiyonu (Loss Function):** `Categorical Crossentropy`")
+    
+    st.markdown("---")
+
+    # GRAFİKLER
+    st.subheader("📈 Model Eğitim Süreci (Accuracy & Loss)")
     try:
         st.image('accuracy_loss.png', use_container_width=True)
     except:
         st.warning("Eğitim grafiği bulunamadı.")
     
-    st.write("---") # Araya ince bir çizgi çeker
+    st.write("---")
+    
     col1, col2 = st.columns(2)
     with col1:
-        st.subheader("Karmaşıklık Matrisi (Confusion Matrix)")
+        st.subheader("Karmaşıklık Matrisi")
         try:
             st.image('confusion_matrix.png', use_container_width=True)
         except:
-            st.warning("Lütfen Evaluate.py dosyasını çalıştırarak confusion_matrix.png dosyasını oluşturduğunuzdan emin olun.")
+            st.warning("Confusion Matrix bulunamadı.")
             
     with col2:
-        st.subheader("ROC Eğrisi (ROC Curve)")
+        st.subheader("ROC Eğrisi ve AUC")
         try:
             st.image('roc_curve.png', use_container_width=True)
         except:
-            st.warning("Lütfen Evaluate.py dosyasını çalıştırarak roc_curve.png dosyasını oluşturduğunuzdan emin olun.")
-
+            st.warning("ROC Eğrisi bulunamadı.")
 # --- 3. PROJE HAKKINDA SAYFASI (Kriter 1, 2, 3, 4, 5, 8, 9, 10, 11, 20) ---
 elif sayfa == "Proje Hakkında ve Sonuç":
     st.title("ℹ️ Proje Detayları ve Sonuç")
