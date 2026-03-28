@@ -19,7 +19,7 @@ class_names = ['Glioma', 'Meningioma', 'No Tumor', 'Pituitary']
 st.sidebar.title("Menü")
 sayfa = st.sidebar.radio("Gezinme", ["Ana Sayfa (Tahmin)", "Model Analizi ve Grafikler", "Proje Hakkında ve Sonuç"])
 
-# --- 1. ANA SAYFA: TAHMİN ARAYÜZÜ (Kriter 19) ---
+# --- 1. ANA SAYFA: TAHMİN ARAYÜZÜ (Kriter 19 ve OOD Güvenlik Filtresi) ---
 if sayfa == "Ana Sayfa (Tahmin)":
     st.title("🧠 Yapay Zeka Destekli Beyin Tümörü Analizi")
     st.write("Bu uygulama, MR görüntüleri üzerinden beyin tümörü tespiti yapmak için eğitilmiş bir derin öğrenme modeli (MobileNetV2) kullanır. Lütfen analiz etmek istediğiniz MR görüntüsünü yükleyin.")
@@ -37,29 +37,48 @@ if sayfa == "Ana Sayfa (Tahmin)":
         with col2:
             st.subheader("Analiz Sonucu")
             with st.spinner('Yapay zeka görüntüyü inceliyor...'):
-                # Görüntü Ön İşleme (Kriter 6)
-                img = image.resize((224, 224))
-                img_array = img_to_array(img)
-                img_array = img_array / 255.0  # Normalizasyon
-                img_array = np.expand_dims(img_array, axis=0)
+                # --- GÜVENLİK FİLTRESİ 1: RENK/MR ANALİZİ ---
+                # MR görüntüleri siyah-beyaz (grayscale) tonlardadır. RGB kanalları arasındaki standart sapma çok düşüktür.
+                img_array_check = np.array(image)
+                # Piksellerin renk kanalları (Axis 2) arasındaki farklılığı ölçüyoruz
+                color_std = np.mean(np.std(img_array_check, axis=2))
                 
-                # Tahmin
-                predictions = model.predict(img_array)[0]
-                predicted_class_idx = np.argmax(predictions)
-                predicted_class = class_names[predicted_class_idx]
-                confidence = predictions[predicted_class_idx] * 100
+                # Eğer renk sapması 15'ten büyükse bu renkli/alakasız bir fotoğraftır
+                is_valid_mri = color_std < 15.0 
                 
-                if predicted_class == 'No Tumor':
-                    st.success(f"**Teşhis:** Sağlıklı Beyin ({predicted_class})")
+                if not is_valid_mri:
+                    st.error("⚠️ **Sistem Uyarısı:** Yüklediğiniz görsel bir Beyin MR görüntüsüne benzemiyor. Renkli veya alakasız bir fotoğraf tespit edildi. Lütfen geçerli bir medikal görüntü yükleyin.")
                 else:
-                    st.error(f"**Teşhis:** Tümör Tespit Edildi - {predicted_class}")
-                
-                st.write(f"**Modelin Güven Skoru:** %{confidence:.2f}")
-                
-                st.write("---")
-                st.write("**Tüm Sınıf Olasılıkları:**")
-                for i, class_name in enumerate(class_names):
-                    st.progress(float(predictions[i]), text=f"{class_name}: %{predictions[i]*100:.2f}")
+                    # Görüntü Ön İşleme (Kriter 6)
+                    img = image.resize((224, 224))
+                    img_array = img_to_array(img)
+                    img_array = img_array / 255.0  # Normalizasyon
+                    img_array = np.expand_dims(img_array, axis=0)
+                    
+                    # Tahmin
+                    predictions = model.predict(img_array)[0]
+                    predicted_class_idx = np.argmax(predictions)
+                    predicted_class = class_names[predicted_class_idx]
+                    confidence = predictions[predicted_class_idx] * 100
+                    
+                    # --- GÜVENLİK FİLTRESİ 2: KARARSIZLIK (GÜVEN EŞİĞİ) ---
+                    # Eğer model %65'ten daha az eminse, görüntü MR formatında olsa bile alakasız veya çok bozuktur.
+                    if confidence < 65.0:
+                        st.warning("⚠️ **Düşük Güven Skoru:** Yüklenen görüntü tıbbi standartlara uymuyor, kalitesi çok düşük veya alakasız olabilir. Model kesin bir teşhis koyamadı.")
+                        st.write(f"En yüksek eşleşme (%{confidence:.2f}): {predicted_class} (Reddedildi)")
+                    else:
+                        # GÖRÜNTÜ GEÇERLİ VE GÜVEN SKORU YÜKSEKSE SONUCU GÖSTER
+                        if predicted_class == 'No Tumor':
+                            st.success(f"**Teşhis:** Sağlıklı Beyin ({predicted_class})")
+                        else:
+                            st.error(f"**Teşhis:** Tümör Tespit Edildi - {predicted_class}")
+                        
+                        st.write(f"**Modelin Güven Skoru:** %{confidence:.2f}")
+                        
+                        st.write("---")
+                        st.write("**Tüm Sınıf Olasılıkları:**")
+                        for i, class_name in enumerate(class_names):
+                            st.progress(float(predictions[i]), text=f"{class_name}: %{predictions[i]*100:.2f}")
 
 # --- 2. MODEL ANALİZİ SAYFASI (Kriter 14, 15, 16 ve Gelişmiş Metrikler) ---
 elif sayfa == "Model Analizi ve Grafikler":
@@ -83,13 +102,9 @@ elif sayfa == "Model Analizi ve Grafikler":
     st.markdown("---")
 
     st.markdown("""
-    ### 🧠 Şüpheci Analiz: Sadece Rakamlara Neden Güvenmiyoruz?
-    Tıbbi teşhis modellerinde "Accuracy" (Genel Doğruluk) veya MAE (Ortalama Mutlak Hata - ki sınıflandırma için kullanımı bilimsel olarak yanlıştır) gibi metrikler tek başına değerlendirildiğinde büyük yanılgılara yol açabilir. Cohen's Kappa değerimiz (0.76) başarının tesadüf olmadığını kanıtlasa da, detaylara inildiğinde kritik klinik riskler mevcuttur:
-    
-    1. **Kritik Risk (Glioma - False Negative):** Model, Glioma tümörlerini yakalamada zorlanmaktadır (Recall: 0.68). Gerçekte hasta olan vakaların bir kısmı sistem tarafından kaçırılabilmektedir. Sağlık bilişiminde yanlış negatifler en tehlikeli senaryodur.
-    2. **Aşırı Hassasiyet (Pituitary - False Positive):** Model, Pituitary vakalarının tamamını (%100) yakalamış olsa da, emin olamadığı diğer tümör tiplerini de "garanti olsun" mantığıyla Pituitary olarak etiketleme eğilimindedir (Precision: 0.75).
-    3. **Sağlıklı Ayrımı:** Model, sağlıklı beyin (No Tumor) görüntülerini çok yüksek bir doğrulukla (%97) diğerlerinden ayırt edebilmektedir.
-    """)
+    ### Sadece Rakamlara Neden Güvenmiyoruz?
+    Tıbbi teşhis modellerinde "Accuracy" (Genel Doğruluk) veya MAE (Ortalama Mutlak Hata - ki sınıflandırma için kullanımı bilimsel olarak yanlıştır) gibi metrikler tek başına değerlendirildiğinde büyük yanılgılara yol açabilir. Cohen's Kappa değerimiz (0.76) başarının tesadüf olmadığını kanıtlasa da, şüphe ile yaklaşmak gerekir.
+     """)
     
     st.markdown("---")
     
