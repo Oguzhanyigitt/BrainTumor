@@ -37,19 +37,25 @@ if sayfa == "Ana Sayfa (Tahmin)":
         with col2:
             st.subheader("Analiz Sonucu")
             with st.spinner('Yapay zeka görüntüyü inceliyor...'):
-                # --- GÜVENLİK FİLTRESİ 1: RENK/MR ANALİZİ ---
-                # MR görüntüleri siyah-beyaz (grayscale) tonlardadır. RGB kanalları arasındaki standart sapma çok düşüktür.
                 img_array_check = np.array(image)
-                # Piksellerin renk kanalları (Axis 2) arasındaki farklılığı ölçüyoruz
-                color_std = np.mean(np.std(img_array_check, axis=2))
                 
-                # Eğer renk sapması 15'ten büyükse bu renkli/alakasız bir fotoğraftır
-                is_valid_mri = color_std < 15.0 
+                # --- GÜVENLİK FİLTRESİ 1: KATI RENK KONTROLÜ ---
+                # "Ortalama" yerine "Maksimum" (np.max) kullanıyoruz. 
+                # Resmin tek bir yerinde bile kırmızı/yeşil/mavi belirginse affetme.
+                color_max_std = np.max(np.std(img_array_check, axis=2))
+                is_colored = color_max_std > 20.0
                 
-                if not is_valid_mri:
-                    st.error("⚠️ **Sistem Uyarısı:** Yüklediğiniz görsel bir Beyin MR görüntüsüne benzemiyor. Renkli veya alakasız bir fotoğraf tespit edildi. Lütfen geçerli bir medikal görüntü yükleyin.")
+                # --- GÜVENLİK FİLTRESİ 2: MR ARKA PLAN (PARLAKLIK) KONTROLÜ ---
+                # MR görüntüleri karanlıktır (genelde siyah arka plan). 
+                # Ortalama parlaklık 0 (siyah) ile 255 (beyaz) arasındadır. Beyaz grafikler 200'ün üzerindedir.
+                mean_brightness = np.mean(img_array_check)
+                is_too_bright = mean_brightness > 160
+                
+                # Eğer resim renkliyse VEYA çok aydınlık/beyaz arka planlıysa doğrudan reddet!
+                if is_colored or is_too_bright:
+                    st.error("⚠️ **Sistem Uyarısı:** Yüklediğiniz görsel yapısal veya renk olarak bir Beyin MR görüntüsüne benzemiyor. Renkli bir fotoğraf veya beyaz arka planlı bir çizim tespit edildi. Lütfen geçerli bir siyah-beyaz MR yükleyin.")
                 else:
-                    # Görüntü Ön İşleme (Kriter 6)
+                    # Görüntü MR testini geçti, Ön İşleme (Kriter 6)
                     img = image.resize((224, 224))
                     img_array = img_to_array(img)
                     img_array = img_array / 255.0  # Normalizasyon
@@ -61,13 +67,13 @@ if sayfa == "Ana Sayfa (Tahmin)":
                     predicted_class = class_names[predicted_class_idx]
                     confidence = predictions[predicted_class_idx] * 100
                     
-                    # --- GÜVENLİK FİLTRESİ 2: KARARSIZLIK (GÜVEN EŞİĞİ) ---
-                    # Eğer model %65'ten daha az eminse, görüntü MR formatında olsa bile alakasız veya çok bozuktur.
-                    if confidence < 65.0:
-                        st.warning("⚠️ **Düşük Güven Skoru:** Yüklenen görüntü tıbbi standartlara uymuyor, kalitesi çok düşük veya alakasız olabilir. Model kesin bir teşhis koyamadı.")
-                        st.write(f"En yüksek eşleşme (%{confidence:.2f}): {predicted_class} (Reddedildi)")
+                    # --- GÜVENLİK FİLTRESİ 3: GERÇEKÇİ GÜVEN EŞİĞİ ---
+                    # Eşiği 65'ten 45'e düşürdük. Böylece Glioma gibi zorlu ama gerçek vakalar yanlışlıkla elenmeyecek.
+                    if confidence < 45.0:
+                        st.warning("⚠️ **Kararsız Teşhis:** Görüntü MR formatına uygun ancak model özelliklerden emin olamadı (Güven < %45). Lezyon sınırları belirsiz olabilir.")
+                        st.write(f"En yüksek eşleşme (%{confidence:.2f}): {predicted_class}")
                     else:
-                        # GÖRÜNTÜ GEÇERLİ VE GÜVEN SKORU YÜKSEKSE SONUCU GÖSTER
+                        # GÖRÜNTÜ GEÇERLİ VE GÜVEN SKORU YETERLİYSE SONUCU GÖSTER
                         if predicted_class == 'No Tumor':
                             st.success(f"**Teşhis:** Sağlıklı Beyin ({predicted_class})")
                         else:
@@ -79,7 +85,6 @@ if sayfa == "Ana Sayfa (Tahmin)":
                         st.write("**Tüm Sınıf Olasılıkları:**")
                         for i, class_name in enumerate(class_names):
                             st.progress(float(predictions[i]), text=f"{class_name}: %{predictions[i]*100:.2f}")
-
 # --- 2. MODEL ANALİZİ SAYFASI (Kriter 14, 15, 16 ve Gelişmiş Metrikler) ---
 elif sayfa == "Model Analizi ve Grafikler":
     st.title("📊 Model Performansı ve Kritik Değerlendirme")
