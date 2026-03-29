@@ -26,7 +26,7 @@ sayfa = st.sidebar.radio("Gezinme", [
 
 # --- 1. ANA SAYFA: TAHMİN ARAYÜZÜ (Kriter 19 ve OOD Güvenlik Filtresi) ---
 if sayfa == "Ana Sayfa (Tahmin)":
-    st.title("🧠 Yapay Zeka Destekli Beyin Tümörü Analizi")
+    st.title("Yapay Zeka Destekli Beyin Tümörü Analizi")
     st.write("Bu uygulama, MR görüntüleri üzerinden beyin tümörü tespiti yapmak için eğitilmiş bir derin öğrenme modeli (MobileNetV2) kullanır. Lütfen analiz etmek istediğiniz MR görüntüsünü yükleyin.")
     
     uploaded_file = st.file_uploader("Bir MR Görüntüsü Yükleyin (JPG, PNG)", type=["jpg", "jpeg", "png"])
@@ -95,7 +95,7 @@ elif sayfa == "Model Analizi ve Grafikler":
     st.title("📊 Model Performansı ve Kritik Değerlendirme")
     
     # ŞIK METRİK KARTLARI (Dashboard)
-    st.markdown("### 🎯 Temel Performans Metrikleri (Test Seti Üzerinde)")
+    st.markdown("### Temel Performans Metrikleri (Test Seti Üzerinde)")
     st.write("Aşağıdaki metrikler, modelin daha önce hiç görmediği 1600 hastalık test verisi üzerinde hesaplanmıştır. (Not: Canlı tahminlerde etiket bilinmediği için metrikler bilimsel standartlar gereği sabit tutulmuştur.)")
     
     # 3 sütunlu 2 satır metrik kartları oluşturuyoruz
@@ -277,7 +277,7 @@ else:
     ''', language='python')
 # --- 3. PROJE HAKKINDA SAYFASI (Kriter 1, 2, 3, 4, 5, 8, 9, 10, 11, 20) ---
 elif sayfa == "Proje Hakkında ve Sonuç":
-    st.title("ℹ️ Proje Detayları ve Sonuç")
+    st.title("Proje Detayları ve Sonuç")
     
     st.markdown("### Problem Tanımı ve Önemi")
     st.write("Beyin tümörlerinin manuel olarak MR görüntülerinden tespit edilmesi uzman radyologlar için zaman alıcı bir süreçtir. Erken ve doğru teşhis, hayatta kalma oranını doğrudan etkiler. Bu proje, beyin MR görüntüleri üzerinden tümör tespiti ve sınıflandırmasını otonom hale getirerek hekimlere karar destek sistemi (ikinci bir görüş) sunmayı amaçlamaktadır.")
