@@ -335,3 +335,9 @@ elif sayfa == "Proje Hakkında ve Sonuç":
     st.markdown("### Kaynakça")
     st.write("- Dataset: [Brain Tumor MRI Dataset - Kaggle](https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset)")
     st.write("- Model Mimari: Howard, A. G., et al. (2017). MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications.")
+    st.write("- Litjens, G., et al. (2017). A survey on deep learning in medical image analysis. Medical Image Analysis, 42, 60-88.")
+    st.write("- Pedregosa, F., et al. (2011). Scikit-learn: Machine Learning in Python. Journal of Machine Learning Research, 12, 2825-2830.")
+    st.write("- Streamlit Inc. (2024). Streamlit: The fastest way to build and share data apps.")
+
+   
+    
