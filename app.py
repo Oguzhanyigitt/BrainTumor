@@ -26,20 +26,63 @@ sayfa = st.sidebar.radio("Gezinme", [
     "Proje Hakkında ve Sonuç"
 ])
 
-# --- 1. ANA SAYFA: TAHMİN ARAYÜZÜ (Kriter 19 ve OOD Güvenlik Filtresi) ---
+# ==========================================
+# 1. ANA SAYFA: TAHMİN ARAYÜZÜ, GARDİYANLAR VE ÖRNEKLER
+# ==========================================
 if sayfa == "Ana Sayfa (Tahmin)":
-    st.title("Yapay Zeka Destekli Beyin Tümörü Analizi")
-    st.write("Bu uygulama, MR görüntüleri üzerinden beyin tümörü tespiti yapmak için eğitilmiş bir derin öğrenme modeli (MobileNetV2) kullanır. Lütfen analiz etmek istediğiniz MR görüntüsünü yükleyin.")
+    st.title("🧠 Yapay Zeka Destekli Beyin Tümörü Analizi")
+    st.write("Bu uygulama, MR görüntüleri üzerinden beyin tümörü tespiti yapmak için eğitilmiş bir derin öğrenme modeli (MobileNetV2) kullanır.")
     
-    uploaded_file = st.file_uploader("Bir MR Görüntüsü Yükleyin (JPG, PNG)", type=["jpg", "jpeg", "png"])
+    st.warning("📌 **DİKKAT:** Bu sistem sadece Beyin MR (Kafatası) görüntüleri için optimize edilmiştir. Farklı organ taramalarında (örn. Kolon, Akciğer) model yanlışlıkla 'Sağlıklı' (No Tumor) sonucu üretebilir.")
     
+    st.markdown("---")
+    
+    # --- YENİ: ÖRNEK RESİMLER SEÇENEĞİ ---
+    st.subheader("🧪 Sistemi Test Et (Örnek Resimler)")
+    st.write("Elinizde hazır bir MR görüntüsü yoksa, aşağıdaki örneklerden birini seçerek sistemi anında test edebilirsiniz.")
+    
+    # Örnek resimlerin isimleri ve dosya yolları (Bu dosyaları oluşturmanız gerekecek)
+    ornekler = {
+        "Seçiniz...": None,
+        "Örnek 1: Glioma Tümörü": "examples/glioma_ex.jpg",
+        "Örnek 2: Meningioma Tümörü": "examples/meningioma_ex.jpg",
+        "Örnek 3: Sağlıklı Beyin (No Tumor)": "examples/notumor_ex.jpg",
+        "Örnek 4: Pituitary Tümörü": "examples/pituitary_ex.jpg"
+    }
+    
+    secilen_ornek_adi = st.selectbox("Bir örnek resim seçin:", list(ornekler.keys()))
+    secilen_ornek_yolu = ornekler[secilen_ornek_adi]
+    
+    st.markdown("### VEYA")
+    
+    # Orijinal dosya yükleme kutusu
+    uploaded_file = st.file_uploader("Kendi MR Görüntünüzü Yükleyin (JPG, PNG)", type=["jpg", "jpeg", "png"])
+    
+    # --- MANTIK BİRLEŞTİRME ---
+    image = None
+    resim_kaynagi = ""
+
+    # Eğer kullanıcı dosya yüklediyse, ona öncelik ver
     if uploaded_file is not None:
+        image = Image.open(uploaded_file).convert('RGB')
+        resim_kaynagi = "Yüklediğiniz Dosya"
+    # Eğer dosya yüklemediyse ama örnek seçtiyse
+    elif secilen_ornek_yolu is not None:
+        try:
+            image = Image.open(secilen_ornek_yolu).convert('RGB')
+            resim_kaynagi = f"Örnek: {secilen_ornek_adi}"
+        except FileNotFoundError:
+            st.error(f"⚠️ **Hata:** Örnek resim dosyası bulunamadı ({secilen_ornek_yolu}). Lütfen proje klasöründe 'examples' adında bir klasör oluşturduğunuzdan ve içine doğru isimli resimleri koyduğunuzdan emin olun.")
+
+    # Eğer analiz edilecek bir resim belirlendiyse
+    if image is not None:
+        st.markdown("---")
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("Yüklenen Görüntü")
-            image = Image.open(uploaded_file).convert('RGB')
-            st.image(image, use_column_width=True)
+            st.subheader("Analiz Edilen Görüntü")
+            st.image(image, use_container_width=True)
+            st.caption(f"Kaynak: {resim_kaynagi}")
             
         with col2:
             st.subheader("Analiz Sonucu")
@@ -47,25 +90,20 @@ if sayfa == "Ana Sayfa (Tahmin)":
                 img_array_check = np.array(image)
                 
                 # --- GÜVENLİK FİLTRESİ 1: KATI RENK KONTROLÜ ---
-                # "Ortalama" yerine "Maksimum" (np.max) kullanıyoruz. 
-                # Resmin tek bir yerinde bile kırmızı/yeşil/mavi belirginse affetme.
                 color_max_std = np.max(np.std(img_array_check, axis=2))
                 is_colored = color_max_std > 20.0
                 
-                # --- GÜVENLİK FİLTRESİ 2: MR ARKA PLAN (PARLAKLIK) KONTROLÜ ---
-                # MR görüntüleri karanlıktır (genelde siyah arka plan). 
-                # Ortalama parlaklık 0 (siyah) ile 255 (beyaz) arasındadır. Beyaz grafikler 200'ün üzerindedir.
+                # --- GÜVENLİK FİLTRESİ 2: MR ARKA PLAN KONTROLÜ ---
                 mean_brightness = np.mean(img_array_check)
                 is_too_bright = mean_brightness > 160
-                
-                # Eğer resim renkliyse VEYA çok aydınlık/beyaz arka planlıysa doğrudan reddet!
+
                 if is_colored or is_too_bright:
-                    st.error("⚠️ **Sistem Uyarısı:** Yüklediğiniz görsel yapısal veya renk olarak bir Beyin MR görüntüsüne benzemiyor.Lütfen geçerli bir beyin görüntüsü girin.")
+                    st.error("⚠️ **Sistem Uyarısı:** Yüklediğiniz görsel yapısal veya renk olarak bir Beyin MR görüntüsüne benzemiyor. Renkli bir fotoğraf veya beyaz arka planlı bir çizim tespit edildi. Lütfen geçerli bir siyah-beyaz MR yükleyin.")
                 else:
-                    # Görüntü MR testini geçti, Ön İşleme (Kriter 6)
+                    # Görüntü beyin anatomisine uygun, Ön İşleme
                     img = image.resize((224, 224))
                     img_array = img_to_array(img)
-                    img_array = img_array / 255.0  # Normalizasyon
+                    img_array = img_array / 255.0  
                     img_array = np.expand_dims(img_array, axis=0)
                     
                     # Tahmin
@@ -75,12 +113,10 @@ if sayfa == "Ana Sayfa (Tahmin)":
                     confidence = predictions[predicted_class_idx] * 100
                     
                     # --- GÜVENLİK FİLTRESİ 3: GERÇEKÇİ GÜVEN EŞİĞİ ---
-                    # Eşiği 65'ten 45'e düşürdük. Böylece Glioma gibi zorlu ama gerçek vakalar yanlışlıkla elenmeyecek.
                     if confidence < 45.0:
                         st.warning("⚠️ **Kararsız Teşhis:** Görüntü MR formatına uygun ancak model özelliklerden emin olamadı (Güven < %45). Lezyon sınırları belirsiz olabilir.")
                         st.write(f"En yüksek eşleşme (%{confidence:.2f}): {predicted_class}")
                     else:
-                        # GÖRÜNTÜ GEÇERLİ VE GÜVEN SKORU YETERLİYSE SONUCU GÖSTER
                         if predicted_class == 'No Tumor':
                             st.success(f"**Teşhis:** Sağlıklı Beyin ({predicted_class})")
                         else:
