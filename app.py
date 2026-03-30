@@ -30,13 +30,13 @@ sayfa = st.sidebar.radio("Gezinme", [
 # 1. ANA SAYFA: TAHMİN ARAYÜZÜ, GARDİYANLAR VE ÖRNEKLER
 # ==========================================
 if sayfa == "Ana Sayfa (Tahmin)":
-    st.title("🧠 Yapay Zeka Destekli Beyin Tümörü Analizi")
+    st.title(" Yapay Zeka Destekli Beyin Tümörü Analizi")
     st.write("Bu uygulama, MR görüntüleri üzerinden beyin tümörü tespiti yapmak için eğitilmiş bir derin öğrenme modeli (MobileNetV2) kullanır.")
     
     st.markdown("---")
     
     # --- YENİ: ÖRNEK RESİMLER SEÇENEĞİ ---
-    st.subheader("🧪 Sistemi Test Et (Örnek Resimler)")
+    st.subheader(" Sistemi Test Et (Örnek Resimler)")
     st.write("Elinizde hazır bir MR görüntüsü yoksa, aşağıdaki örneklerden birini seçerek sistemi anında test edebilirsiniz.")
     
     # Örnek resimlerin isimleri ve dosya yolları (Bu dosyaları oluşturmanız gerekecek)
