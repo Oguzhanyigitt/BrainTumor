@@ -33,8 +33,6 @@ if sayfa == "Ana Sayfa (Tahmin)":
     st.title("🧠 Yapay Zeka Destekli Beyin Tümörü Analizi")
     st.write("Bu uygulama, MR görüntüleri üzerinden beyin tümörü tespiti yapmak için eğitilmiş bir derin öğrenme modeli (MobileNetV2) kullanır.")
     
-    st.warning("📌 **DİKKAT:** Bu sistem sadece Beyin MR (Kafatası) görüntüleri için optimize edilmiştir. Farklı organ taramalarında (örn. Kolon, Akciğer) model yanlışlıkla 'Sağlıklı' (No Tumor) sonucu üretebilir.")
-    
     st.markdown("---")
     
     # --- YENİ: ÖRNEK RESİMLER SEÇENEĞİ ---
