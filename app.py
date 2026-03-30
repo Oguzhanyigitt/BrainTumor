@@ -1,4 +1,6 @@
 import streamlit as st
+import plotly.graph_objects as go
+import plotly.express as px
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import img_to_array
 from PIL import Image
@@ -114,7 +116,7 @@ elif sayfa == "Model Analizi ve Grafikler":
     st.markdown("""
     ### Sadece Rakamlara Neden Güvenmiyoruz?
     Tıbbi teşhis modellerinde "Accuracy" (Genel Doğruluk) veya MAE (Ortalama Mutlak Hata - ki sınıflandırma için kullanımı bilimsel olarak yanlıştır) gibi metrikler tek başına değerlendirildiğinde büyük yanılgılara yol açabilir. Cohen's Kappa değerimiz (0.76) başarının tesadüf olmadığını kanıtlasa da, şüphe ile yaklaşmak gerekir.
-     """)
+    """)
     
     st.markdown("---")
     
@@ -131,22 +133,52 @@ elif sayfa == "Model Analizi ve Grafikler":
     
     st.markdown("---")
 
-    # GRAFİKLER
-    st.subheader("📈 Model Eğitim Süreci (Accuracy & Loss)")
-    try:
-        st.image('accuracy_loss.png', use_container_width=True)
-    except:
-        st.warning("Eğitim grafiği bulunamadı.")
+    # CANLI GRAFİKLER (PLOTLY ENTEGRASYONU)
+    st.subheader("📈 Canlı Model Eğitim Süreci (Accuracy & Loss)")
+    st.write("Aşağıdaki grafikler interaktiftir. Değerleri görmek için çizgilerin üzerine gelebilir veya istediğiniz bir bölgeye yakınlaşabilirsiniz (zoom).")
     
+    # Orijinal eğitim verilerin
+    epochs = list(range(1, 21))
+    acc = [0.5871, 0.7647, 0.8007, 0.8315, 0.8400, 0.8522, 0.8654, 0.8728, 0.8761, 0.8763, 0.8790, 0.8830, 0.8913, 0.8929, 0.8962, 0.9040, 0.8980, 0.9027, 0.9076, 0.9103]
+    val_acc = [0.8259, 0.8446, 0.8509, 0.8759, 0.8750, 0.8884, 0.8830, 0.8893, 0.8884, 0.8964, 0.8973, 0.9000, 0.9018, 0.9054, 0.9116, 0.9080, 0.9089, 0.9116, 0.9152, 0.9054]
+    loss = [1.0129, 0.6278, 0.5298, 0.4573, 0.4229, 0.4038, 0.3828, 0.3605, 0.3457, 0.3405, 0.3222, 0.3133, 0.2911, 0.2993, 0.2923, 0.2745, 0.2732, 0.2690, 0.2605, 0.2562]
+    val_loss = [0.5730, 0.4553, 0.4051, 0.3628, 0.3550, 0.3203, 0.3175, 0.3046, 0.3005, 0.2845, 0.2794, 0.2744, 0.2677, 0.2563, 0.2546, 0.2647, 0.2402, 0.2445, 0.2394, 0.2395]
+
+    # 1. Canlı Accuracy Grafiği
+    fig_acc = go.Figure()
+    fig_acc.add_trace(go.Scatter(x=epochs, y=acc, mode='lines+markers', name='Eğitim Doğruluğu', line=dict(color='blue', width=3)))
+    fig_acc.add_trace(go.Scatter(x=epochs, y=val_acc, mode='lines+markers', name='Doğrulama Doğruluğu', line=dict(color='red', width=3)))
+    fig_acc.update_layout(title="Eğitim ve Doğrulama Doğruluğu", xaxis_title="Epoch", yaxis_title="Doğruluk (Accuracy)", hovermode="x unified")
+    st.plotly_chart(fig_acc, use_container_width=True)
+
+    # 2. Canlı Loss Grafiği
+    fig_loss = go.Figure()
+    fig_loss.add_trace(go.Scatter(x=epochs, y=loss, mode='lines+markers', name='Eğitim Kaybı', line=dict(color='blue', width=3)))
+    fig_loss.add_trace(go.Scatter(x=epochs, y=val_loss, mode='lines+markers', name='Doğrulama Kaybı', line=dict(color='red', width=3)))
+    fig_loss.update_layout(title="Eğitim ve Doğrulama Kaybı", xaxis_title="Epoch", yaxis_title="Kayıp (Loss)", hovermode="x unified")
+    st.plotly_chart(fig_loss, use_container_width=True)
+
     st.write("---")
     
     col1, col2 = st.columns(2)
     with col1:
-        st.subheader("Karmaşıklık Matrisi")
-        try:
-            st.image('confusion_matrix.png', use_container_width=True)
-        except:
-            st.warning("Confusion Matrix bulunamadı.")
+        st.subheader("🧩 Canlı Karmaşıklık Matrisi")
+        st.write("Detayları incelemek için hücrelerin üzerine gelebilirsiniz.")
+        
+        # Orijinal matris değerlerin
+        z = [[272, 70, 26, 32], 
+             [16, 256, 32, 96], 
+             [3, 5, 390, 2], 
+             [1, 0, 0, 399]]
+        
+        fig_cm = px.imshow(z, text_auto=True, 
+                           labels=dict(x="Tahmin Edilen Sınıf", y="Gerçek Sınıf", color="Veri Sayısı"),
+                           x=['Glioma', 'Meningioma', 'No Tumor', 'Pituitary'],
+                           y=['Glioma', 'Meningioma', 'No Tumor', 'Pituitary'],
+                           color_continuous_scale='Blues')
+        
+        fig_cm.update_layout(title_text="Confusion Matrix", title_x=0.5)
+        st.plotly_chart(fig_cm, use_container_width=True)
             
     with col2:
         st.subheader("ROC Eğrisi ve AUC")
